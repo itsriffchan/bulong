@@ -88,7 +88,7 @@ Instead of updating every model parameter, LoRA trains lightweight adapter weigh
 
 The pipeline is designed to support multiple Philippine languages contained within the UP-DSP-PLD corpus.
 
-The initial experiments will focus on a subset of languages (such as Filipino and Cebuano), while the architecture is designed to scale to the remaining languages without modification.
+The experiments will focus specifically on **Ilokano, Bikolano, and Waray**, showing the model's capacity to adapt to regional languages.
 
 ---
 
@@ -112,17 +112,11 @@ Evaluation scripts will be reusable for future experiments.
 
 This project is built around the **UP-DSP Philippine Languages Database (UP-DSP-PLD)**.
 
-The dataset contains multilingual speech recordings including:
+The project focuses on speech recordings in:
 
-* Filipino
-* English
-* Cebuano
-* Kapampangan
-* Hiligaynon
 * Ilokano
 * Bikolano
 * Waray
-* Tausug
 
 The dataset itself is **not redistributed** with this repository.
 

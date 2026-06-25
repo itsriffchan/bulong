@@ -17,11 +17,11 @@ def generate_synthetic_samples(count):
     """Generates synthetic audio arrays and dummy transcripts for offline testing."""
     samples = []
     transcripts = [
-        "magandang umaga sa inyong lahat",
-        "kumusta ka na kaibigan",
-        "ito ay isang halimbawa ng pagsasalita para sa ating modelo",
-        "mabilis tumakbo ang aso sa kalsada",
-        "maraming salamat sa inyong pagtulong at kooperasyon"
+        "naimbag a bigat kadakayo amin",
+        "marhay na aga sa saindo gabos",
+        "maupay nga aga ha iyo ngatanan",
+        "kumusta kayo amin a kakailian",
+        "damo nga salamat ha pagbulig niyo"
     ]
     
     # Standard 2 seconds of silence/sine wave at 16kHz

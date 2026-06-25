@@ -195,7 +195,6 @@ python evaluation/evaluate.py
 * University of the Philippines – Department of Speech Processing
 * OpenAI Whisper Team
 * Hugging Face PEFT & Transformers Teams
-* Mozilla Data Collective
 
 ---
 

@@ -55,7 +55,7 @@ This project will investigate whether parameter-efficient fine-tuning can system
 
 ## Planned Supported Languages
 
-The project is designed to train and evaluate on the UP-DSP Philippine Languages Database, which contains recordings in:
+The project is designed to train and evaluate on the [UP-DSP Philippine Languages Database](https://mozilladatacollective.com/datasets/cmmxhw46c00tqnw07xyr94zjk), which contains recordings in:
 
 * Filipino / Tagalog
 * English

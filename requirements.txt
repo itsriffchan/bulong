@@ -1,0 +1,10 @@
+torch
+transformers>=4.33.0
+datasets
+peft
+accelerate
+jiwer
+evaluate
+soundfile
+librosa
+torchcodec

@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Dataset & Processed files
+data/processed_dataset/
+
+# Model checkpoints & adapter weights
+training/whisper-tiny-lora-fil/
+**/checkpoint-*/
+
+# Environment variables / API Keys
+.env
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -1,9 +1,11 @@
 # Bulong: Fine-Tuning Whisper for Philippine Multilingual Speech Recognition
 
-## Group Members
-* **[Member 1 Name]** - [Contribution/Role]
-* **[Member 2 Name]** - [Contribution/Role]
-* **[Member 3 Name]** - [Contribution/Role]
+# Group Name & Members ↓
+## def \_\_init__():
+- self.member1 = **"Reese Chan"**
+- self.member2 = **"Alfred Nathaniel Embuscado"**
+- self.member3 = **"Noel Ocampo"**
+- self.member4 = **"John Christopher Umali"**
 
 ---
 

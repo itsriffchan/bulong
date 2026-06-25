@@ -1,12 +1,12 @@
-# PH-Whisper: Fine-Tuning Whisper for Philippine Multilingual Speech Recognition
+# Bulong: Fine-Tuning Whisper for Philippine Multilingual Speech Recognition
 
 ## Overview
 
-PH-Whisper is an open-source research project that provides a reproducible pipeline for fine-tuning OpenAI's Whisper model on Philippine languages using the **UP-DSP Philippine Languages Database (UP-DSP-PLD)**.
+Bulong is an open-source research project that provides a reproducible pipeline for fine-tuning OpenAI's Whisper model on Philippine languages using the **UP-DSP Philippine Languages Database (UP-DSP-PLD)**.
 
 The project aims to improve automatic speech recognition (ASR) for underrepresented Philippine languages while providing reusable tools that future researchers and developers can build upon.
 
-Rather than creating another speech application, PH-Whisper focuses on building foundational infrastructure:
+Rather than creating another speech application, Bulong focuses on building foundational infrastructure:
 
 * Reproducible data preprocessing
 * Parameter-efficient Whisper fine-tuning (LoRA)
@@ -59,7 +59,7 @@ The project is designed around the UP-DSP Philippine Languages Database, which c
 ## Project Structure
 
 ```text
-ph-whisper/
+Bulong/
 │
 ├── data/
 │   ├── preprocess.py
@@ -153,8 +153,8 @@ This repository contains only the code required to preprocess, train, and evalua
 ## Installation
 
 ```bash
-git clone https://github.com/your-org/ph-whisper.git
-cd ph-whisper
+git clone https://github.com/your-org/Bulong.git
+cd Bulong
 
 pip install -r requirements.txt
 ```

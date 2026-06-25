@@ -1,50 +1,61 @@
 # Bulong: Fine-Tuning Whisper for Philippine Multilingual Speech Recognition
 
-## Overview
-
-Bulong is an open-source research project that provides a reproducible pipeline for fine-tuning OpenAI's Whisper model on Philippine languages using the **UP-DSP Philippine Languages Database (UP-DSP-PLD)**.
-
-The project aims to improve automatic speech recognition (ASR) for underrepresented Philippine languages while providing reusable tools that future researchers and developers can build upon.
-
-Rather than creating another speech application, Bulong focuses on building foundational infrastructure:
-
-* Reproducible data preprocessing
-* Parameter-efficient Whisper fine-tuning (LoRA)
-* Standardized evaluation benchmarks
-* Open training and evaluation pipelines
+## Group Members
+* **[Member 1 Name]** - [Contribution/Role]
+* **[Member 2 Name]** - [Contribution/Role]
+* **[Member 3 Name]** - [Contribution/Role]
 
 ---
 
-## Motivation
+## Project Overview
 
-Despite the Philippines being home to more than 130 languages, many remain underrepresented in modern speech recognition systems.
+Bulong is an open-source research project designed to build a reproducible pipeline for fine-tuning OpenAI's Whisper model on Philippine languages using the **UP-DSP Philippine Languages Database (UP-DSP-PLD)**.
 
-General-purpose ASR models such as Whisper perform well on high-resource languages but often struggle with:
+The project's goal is to improve automatic speech recognition (ASR) for underrepresented Philippine languages by building foundational infrastructure, including:
 
-* Regional Philippine languages
-* Code-switched speech
+* A reproducible data preprocessing pipeline
+* A parameter-efficient Whisper fine-tuning setup (using LoRA adapters)
+* A standardized evaluation benchmark comparing fine-tuned models against base models
+* Open and accessible training and evaluation pipelines for other researchers to extend
+
+Rather than creating a standalone end-user application, Bulong focuses on providing the open-source engineering blueprint to make multilingual speech models accessible in the local research community.
+
+---
+
+## AI Disclosure
+This project utilizes AI-assisted tools for development: ChatGPT was used for explaining technical procedures and conceptual mapping of the architecture, while Google DeepMind's Antigravity AI assistant supported the initial structural design, pipeline scaffolding, and codebase optimization. The core machine learning training pipeline is designed to use OpenAI's Whisper model fine-tuned via Low-Rank Adaptation (LoRA) to adapt to low-resource and code-switched Philippine languages.
+
+---
+
+## Motivation & Research Scope
+
+Despite the Philippines being home to more than 130 languages, many remain severely underrepresented in modern speech recognition systems.
+
+General-purpose ASR models such as Whisper perform well on high-resource languages but struggle with:
+
+* Regional Philippine languages (e.g. Cebuano, Kapampangan, Hiligaynon)
+* Code-switched speech (Taglish)
 * Local accents and pronunciations
 * Domain-specific vocabulary
 
-This project investigates whether parameter-efficient fine-tuning can improve multilingual ASR performance while keeping training reproducible and accessible.
+This project will investigate whether parameter-efficient fine-tuning can systematically improve multilingual ASR performance across these low-resource languages while keeping training reproducible and accessible on consumer-grade hardware.
 
 ---
 
-## Features
+## Features We Will Build
 
-* Fine-tune Whisper using LoRA (Low-Rank Adaptation)
-* Support for multiple Philippine languages
-* Automated dataset preprocessing
-* Hugging Face-compatible dataset conversion
-* Standardized evaluation using WER and CER
+* **LoRA-Based Fine-Tuning:** Parameter-efficient adaptation of Whisper models using Hugging Face PEFT to reduce GPU memory requirements.
+* **Multilingual Support:** Scaffolding to process and train on multiple Philippine languages concurrently.
+* **Automated Data Preprocessing:** Scripts to automatically resample audio to 16kHz, extract log-Mel spectrograms, normalize transcript text, and handle tokenization. Includes a local synthetic fallback to test code pipelines offline or under Hugging Face rate limits.
+* **Standardized Evaluation:** Automating WER (Word Error Rate) and CER (Character Error Rate) evaluations across base and fine-tuned models.
 
 ---
 
-## Supported Languages
+## Planned Supported Languages
 
-The project is designed around the UP-DSP Philippine Languages Database, which contains recordings in:
+The project is designed to train and evaluate on the UP-DSP Philippine Languages Database, which contains recordings in:
 
-* Filipino
+* Filipino / Tagalog
 * English
 * Cebuano
 * Kapampangan
@@ -56,130 +67,110 @@ The project is designed around the UP-DSP Philippine Languages Database, which c
 
 ---
 
-## Project Structure
+## Project Structure & Architecture
+
+We will organize the codebase as follows:
 
 ```text
 Bulong/
 │
 ├── data/
-│   ├── preprocess.py
-│   ├── validate.py
-│   └── create_splits.py
+│   ├── preprocess.py      # Resamples audio, extracts spectrograms, tokenizes transcripts
+│   └── ...
 │
 ├── training/
-│   ├── train_lora.py
-│   ├── inference.py
-│   └── config.yaml
+│   ├── train_lora.py      # Core script to apply LoRA and run Seq2SeqTrainer
+│   └── config.yaml        # Configuration file for model and training hyperparameters
 │
 ├── evaluation/
-│   ├── evaluate.py
-│   ├── wer.py
-│   └── cer.py
+│   └── evaluate.py        # Generates test transcriptions and computes WER/CER
 │
-├── notebooks/
-│   └── dataset_exploration.ipynb
-│
+├── .gitignore             # Exclusions (virtual environments, data caches, credentials)
 ├── README.md
-└── requirements.txt
+└── requirements.txt       # Project python dependencies
 ```
 
 ---
 
-## Pipeline
+## Target Tech Stack
+
+* **Language:** Python
+* **Deep Learning Framework:** PyTorch
+* **Model Pipeline & Tokenizer:** Hugging Face Transformers
+* **Dataset Management:** Hugging Face Datasets
+* **Parameter-Efficient Adapters:** PEFT (LoRA)
+* **Training Acceleration:** Accelerate
+* **Audio Decoding:** torchcodec, soundfile, librosa
+* **Evaluation Metrics:** Evaluate, JiWER
+
+---
+
+## Pipeline Architecture
 
 ```text
-UP-DSP-PLD
+UP-DSP-PLD (Raw Audio & Text)
         │
         ▼
-Data Validation
+Data Validation & Normalization
         │
         ▼
-Audio Preprocessing
+Audio Preprocessing (16kHz Resampling)
         │
         ▼
-Transcript Normalization
+Feature Extraction (Log-Mel Spectrograms)
         │
         ▼
-Dataset Conversion
+Whisper LoRA Fine-Tuning (Seq2Seq Training)
         │
         ▼
-Whisper LoRA Fine-Tuning
+ASR Evaluation (WER / CER Metrics calculation)
         │
         ▼
-Evaluation (WER / CER)
-        │
-        ▼
-Model & Benchmark Results
+Baseline Comparisons & Benchmark Results
 ```
 
 ---
 
-## Tech Stack
+## Target Dataset
 
-* Python
-* PyTorch
-* Hugging Face Transformers
-* Hugging Face Datasets
-* PEFT (LoRA)
-* Accelerate
-* Evaluate
-* JiWER
+This project is built around the **UP-DSP Philippine Languages Database (UP-DSP-PLD)**.
+
+The raw dataset is **not redistributed** with this project. Users must obtain the dataset directly from its official source and comply with its licensing terms. The repository will contain only the code required to preprocess, train, and evaluate models using the dataset.
 
 ---
 
-## Evaluation
+## Setup & Running the Pipeline
 
-Models are evaluated using:
+### 1. Installation & Environment Setup
+Activate the virtual environment and install the required libraries:
 
-* Word Error Rate (WER)
-* Character Error Rate (CER)
+* **PowerShell**:
+  ```powershell
+  .venv\Scripts\Activate.ps1
+  pip install -r requirements.txt
+  ```
+* **Command Prompt (CMD)**:
+  ```cmd
+  .venv\Scripts\activate.bat
+  pip install -r requirements.txt
+  ```
 
-Performance is compared against the original Whisper model to measure improvements across Philippine languages.
-
----
-
-## Dataset
-
-This project uses the **UP-DSP Philippine Languages Database (UP-DSP-PLD)**.
-
-The dataset is **not included** in this repository.
-
-Users must request or obtain the dataset directly from its official source and comply with its licensing terms.
-
-This repository contains only the code required to preprocess, train, and evaluate models using the dataset.
-
----
-
-## Installation
-
-```bash
-git clone https://github.com/your-org/Bulong.git
-cd Bulong
-
-pip install -r requirements.txt
-```
-
----
-
-## Usage
-
-### 1. Download the dataset
-
-Obtain the UP-DSP-PLD dataset through its official distribution channel.
-
-### 2. Preprocess
+### 2. Running Data Preprocessing
+This script will preprocess local files, or run in a streaming demo mode (fetching samples from Hugging Face FLEURS) to verify the pipeline. If rate-limited or offline, it automatically falls back to generating local synthetic files:
 
 ```bash
 python data/preprocess.py
 ```
 
-### 3. Train
+### 3. Executing Whisper LoRA Fine-Tuning
+Run the training loop based on the configurations inside `training/config.yaml`. This wraps the model in LoRA adapters and trains it on the preprocessed dataset:
 
 ```bash
 python training/train_lora.py
 ```
 
-### 4. Evaluate
+### 4. Running Evaluation
+Test the base or fine-tuned model on the validation/test subsets and calculate ASR accuracy metrics (WER and CER):
 
 ```bash
 python evaluation/evaluate.py
@@ -187,22 +178,21 @@ python evaluation/evaluate.py
 
 ---
 
-## Future Work
+## Future Goals
 
-* Support additional Philippine languages
-* Code-switching benchmarks
-* Speaker adaptation
-* Quantized models for mobile deployment
-* Public evaluation leaderboard
-* Additional ASR model comparisons
+* Support additional Philippine regional languages
+* Build code-switching benchmark splits
+* Integrate speaker adaptation methods
+* Compile quantized models for mobile deployment
+* Construct a public evaluation benchmark leaderboard
 
 ---
 
 ## Acknowledgements
 
 * University of the Philippines – Department of Speech Processing
-* OpenAI Whisper
-* Hugging Face
+* OpenAI Whisper Team
+* Hugging Face PEFT & Transformers Teams
 * Mozilla Data Collective
 
 ---
@@ -211,4 +201,4 @@ python evaluation/evaluate.py
 
 This repository is released under the MIT License.
 
-**Note:** The UP-DSP-PLD dataset is distributed under its own license and is **not redistributed** with this project. Users are responsible for obtaining the dataset legally and complying with its terms.
+**Note:** The UP-DSP-PLD dataset is distributed under its own license. Users are responsible for obtaining the dataset legally and complying with its terms.

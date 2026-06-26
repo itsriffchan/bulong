@@ -42,20 +42,16 @@ This project uses the **UP-DSP Philippine Languages Database (UP-DSP-PLD)**[Link
 ```text
 Bulong/
 │
-├── bulong_pipeline.py     # End-to-end Google Colab pipeline
+├── run_pipeline.py        # End-to-end training and evaluation pipeline
 │
 ├── data/
 │   └── preprocess.py      # Preprocesses and sets up dataset splits
 │
 ├── training/
 │   ├── train.py           # Model fine-tuning logic
-│   └── config.yaml        # Training parameters config
 │
 ├── evaluation/
 │   └── evaluate.py        # Model checkpoint evaluation (WER)
-│
-├── notebooks/
-│   └── explore_dataset.ipynb
 │
 ├── README.md
 ├── requirements.txt
@@ -81,20 +77,27 @@ pip install -r requirements.txt
 
 ### 2. Execution Flow
 
-#### Preprocessing
+#### Running the Full Pipeline (Recommended)
+You can run the entire dataset downloading, preprocessing, training, and evaluation pipeline with a single orchestrator command:
 ```bash
-python data/preprocess.py
+python run_pipeline.py
 ```
 
-#### Training
-```bash
-python training/train.py
-```
+#### Running Modular Steps Individually
+Alternatively, you can run individual stages of the pipeline separately:
 
-#### Evaluation
-```bash
-python evaluation/evaluate.py
-```
+* **Preprocessing**:
+  ```bash
+  python data/preprocess.py
+  ```
+* **Training**:
+  ```bash
+  python training/train.py
+  ```
+* **Evaluation**:
+  ```bash
+  python evaluation/evaluate.py
+  ```
 
 ---
 

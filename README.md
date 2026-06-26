@@ -75,18 +75,16 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-### 2. Dataset Setup
+### 2. Dataset Setup & Automated Preprocessing
 Due to licensing and distribution restrictions, the **UP-DSP-PLD** dataset cannot be redistributed or downloaded automatically. You must request and obtain it officially from UP-DSP.
 
-Once obtained, set up your workspace folders:
-* **Running Locally**: Place your extracted `PLD` directory under `data/PLD` (so that `data/PLD/wavs` exists).
-* **Running in Google Colab**:
-  1. Upload `PLD.zip` to your Google Drive.
-  2. In your notebook, mount Drive and copy the zip to Colab's workspace:
-     ```python
-     !cp /content/drive/MyDrive/PLD.zip /content/PLD.zip
-     ```
-     The pipeline will automatically extract the zip file for you when executed.
+Once obtained, you do **not** need to manually format or upload split JSON files. The pipeline handles this automatically:
+
+*   **Running Locally**: Place your dataset directory or archive (e.g., `.zip` or `.tar.gz`) under the project directory. The pipeline will automatically locate it, extract it (if it is an archive), and generate the splits.
+*   **Running in Google Colab**:
+    1. Upload your dataset archive (e.g., `up-dsp-philippine-languages-database-up-d2a7dbb0.tar.gz` or `PLD.zip`) to your Google Drive.
+    2. Mount your Google Drive in your Colab notebook.
+    3. Run the pipeline orchestrator. It will automatically scan your Drive, copy the archive to local storage, extract it, and dynamically build the `train.json`, `val.json`, and `test.json` split files from the raw speaker `.log` and `.wav` files.
 
 ### 3. Execution Flow
 
@@ -96,21 +94,26 @@ You can run the entire preprocessing, training, and evaluation pipeline with a s
 python run_pipeline.py
 ```
 
+To run a quick, 2-step sanity check to verify your setup:
+```bash
+python run_pipeline.py --dry-run
+```
+
 #### Running Modular Steps Individually
 Alternatively, you can run individual stages of the pipeline separately:
 
-* **Preprocessing**:
-  ```bash
-  python data/preprocess.py
-  ```
-* **Training**:
-  ```bash
-  python training/train.py
-  ```
-* **Evaluation**:
-  ```bash
-  python evaluation/evaluate.py
-  ```
+*   **Preprocessing**:
+    ```bash
+    python data/preprocess.py
+    ```
+*   **Training**:
+    ```bash
+    python training/train.py
+    ```
+*   **Evaluation**:
+    ```bash
+    python evaluation/evaluate.py
+    ```
 
 ---
 

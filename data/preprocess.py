@@ -66,6 +66,24 @@ def preprocess_dataset(destination="/content", dry_run=False):
             and ('pld' in f.lower() or 'up-dsp' in f.lower())
         ]
         
+        if not archive_files and destination == "/content":
+            drive_path = "/content/drive/MyDrive"
+            if os.path.exists(drive_path):
+                print(f"Scanning Google Drive ({drive_path}) for dataset archives...")
+                drive_archives = [
+                    f for f in os.listdir(drive_path)
+                    if (f.lower().endswith('.zip') or f.lower().endswith('.tar.gz') or f.lower().endswith('.tgz'))
+                    and ('pld' in f.lower() or 'up-dsp' in f.lower())
+                ]
+                if drive_archives:
+                    drive_file = drive_archives[0]
+                    drive_src = os.path.join(drive_path, drive_file)
+                    local_dest = os.path.join(destination, drive_file)
+                    print(f"Found archive on Google Drive: '{drive_file}'. Copying to local Colab storage...")
+                    import shutil
+                    shutil.copy(drive_src, local_dest)
+                    archive_files = [drive_file]
+
         if archive_files:
             matched_archive = archive_files[0]
             local_archive_path = os.path.join(destination, matched_archive)

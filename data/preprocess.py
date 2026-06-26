@@ -6,8 +6,105 @@ Data preprocessing script for UP-DSP Philippine Languages Database (PLD).
 import os
 import zipfile
 import json
+import re
+import random
 from datasets import Dataset, DatasetDict, Audio
 from transformers import WhisperFeatureExtractor, WhisperTokenizer, WhisperProcessor
+
+def generate_splits_from_logs(dataset_dir, output_dir):
+    print(f"Generating dataset split files from logs in {dataset_dir}...")
+    all_samples = []
+    
+    # Recursively find all log files
+    log_files = []
+    for root, dirs, files in os.walk(dataset_dir):
+        for f in files:
+            if f.endswith('.log'):
+                log_files.append(os.path.join(root, f))
+                
+    print(f"Found {len(log_files)} session log files.")
+    
+    for log_path in log_files:
+        log_dir = os.path.dirname(log_path)
+        
+        # Read the log file
+        metadata = {}
+        data_lines = []
+        try:
+            with open(log_path, 'r', encoding='utf-8', errors='ignore') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    if '=' in line and not ('.wav' in line.lower()):
+                        parts = line.split('=', 1)
+                        key = parts[0].strip()
+                        val = parts[1].strip().strip('"')
+                        metadata[key] = val
+                    elif '.wav' in line.lower():
+                        data_lines.append(line)
+        except Exception as e:
+            print(f"Error reading log file {log_path}: {e}")
+            continue
+            
+        speaker_id = metadata.get('SpeakerID') or metadata.get('SpeakerName') or 'unknown'
+        dialect = metadata.get('SpekaerDialect') or metadata.get('SpeakerDialect') or 'unknown'
+        
+        for line in data_lines:
+            match = re.match(r'^([^\s]+\.wav)\s+"([^"]*)"\s+"([^"]*)"', line)
+            if match:
+                wav_name = match.group(1)
+                orig_file = match.group(2)
+                transcript = match.group(3).strip()
+            else:
+                parts = line.split(None, 2)
+                if len(parts) >= 3:
+                    wav_name = parts[0]
+                    orig_file = parts[1].strip('"')
+                    transcript = parts[2].strip().strip('"').strip()
+                else:
+                    continue
+            
+            wav_path = os.path.join(log_dir, wav_name)
+            
+            if os.path.exists(wav_path):
+                sample = {
+                    "wav_file": os.path.abspath(wav_path),
+                    "original_file": orig_file,
+                    "normalized_transcript": transcript,
+                    "speaker_id": speaker_id,
+                    "dialect": dialect
+                }
+                all_samples.append(sample)
+                
+    print(f"Total valid samples found: {len(all_samples)}")
+    if not all_samples:
+        print("Warning: No valid speech samples found.")
+        return False
+        
+    random.seed(42)
+    random.shuffle(all_samples)
+    
+    total = len(all_samples)
+    train_end = int(total * 0.8)
+    val_end = train_end + int(total * 0.1)
+    
+    train_split = all_samples[:train_end]
+    val_split = all_samples[train_end:val_end]
+    test_split = all_samples[val_end:]
+    
+    print(f"Splits generated: {len(train_split)} train, {len(val_split)} val, {len(test_split)} test.")
+    
+    os.makedirs(output_dir, exist_ok=True)
+    with open(os.path.join(output_dir, "train.json"), "w", encoding="utf-8") as f:
+        json.dump(train_split, f, indent=2, ensure_ascii=False)
+    with open(os.path.join(output_dir, "val.json"), "w", encoding="utf-8") as f:
+        json.dump(val_split, f, indent=2, ensure_ascii=False)
+    with open(os.path.join(output_dir, "test.json"), "w", encoding="utf-8") as f:
+        json.dump(test_split, f, indent=2, ensure_ascii=False)
+        
+    print(f"Splits saved to {output_dir}")
+    return True
 
 def resolve_audio_path(wav_path, train_dir):
     clean_path = wav_path.replace("\\", "/")
@@ -173,13 +270,16 @@ def preprocess_dataset(destination="/content", dry_run=False):
                 val_path = os.path.join(root, "val.json")
 
     if not train_path or not val_path:
-        print("\n" + "="*60)
-        print("ERROR: train.json or val.json not found!")
-        print("="*60)
-        print(f"Looked recursively in: '{os.path.abspath(destination)}' and '{os.path.abspath('.')}'")
-        print("Please ensure your dataset contains the split files ('train.json' and 'val.json').")
-        print("="*60 + "\n")
-        raise FileNotFoundError(f"Could not find 'train.json' or 'val.json'.")
+        print("JSON split files not found. Attempting to generate splits from log files...")
+        if pld_dir and os.path.exists(pld_dir):
+            success = generate_splits_from_logs(pld_dir, destination)
+            if success:
+                train_path = os.path.join(destination, "train.json")
+                val_path = os.path.join(destination, "val.json")
+            else:
+                raise FileNotFoundError("Could not generate splits: no valid log/wav samples found in dataset directory.")
+        else:
+            raise FileNotFoundError(f"Could not locate dataset folder to generate splits. Please ensure dataset is extracted.")
 
     print(f"Found train.json at: {train_path}")
     print(f"Found val.json at: {val_path}")

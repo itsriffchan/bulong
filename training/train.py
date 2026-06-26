@@ -47,7 +47,7 @@ class DataCollatorSpeechSeq2SeqWithPadding:
         batch["labels"] = labels
         return batch
 
-def train_model(raw_dataset, processor, tokenizer, model_name="openai/whisper-tiny", output_dir="/content/drive/MyDrive/whisper-tiny-philippine-dialects"):
+def train_model(raw_dataset, processor, tokenizer, model_name="openai/whisper-tiny", output_dir="/content/drive/MyDrive/whisper-tiny-philippine-dialects", dry_run=False):
     # Load model
     model = WhisperForConditionalGeneration.from_pretrained(model_name)
     model.config.forced_decoder_ids = processor.get_decoder_prompt_ids(language="Tagalog", task="transcribe")
@@ -71,29 +71,50 @@ def train_model(raw_dataset, processor, tokenizer, model_name="openai/whisper-ti
         return {"wer": wer}
 
     # Training Arguments
-    training_args = Seq2SeqTrainingArguments(
-        output_dir=output_dir,
-        per_device_train_batch_size=16,
-        gradient_accumulation_steps=2,
-        learning_rate=1e-5,
-        warmup_steps=500,
-        max_steps=4000,
-        gradient_checkpointing=True,
-        fp16=True,
-        eval_strategy="steps",
-        per_device_eval_batch_size=8,
-        predict_with_generate=True,
-        generation_max_length=225,
-        save_steps=1000,
-        eval_steps=1000,
-        logging_steps=50,
-        report_to=["tensorboard"],
-        load_best_model_at_end=True,
-        metric_for_best_model="wer",
-        greater_is_better=False,
-        dataloader_num_workers=2,
-        remove_unused_columns=False
-    )
+    if dry_run:
+        print("Dry run mode: Configuring minimal training arguments (2 steps)...")
+        training_args = Seq2SeqTrainingArguments(
+            output_dir=output_dir,
+            per_device_train_batch_size=2,
+            gradient_accumulation_steps=1,
+            learning_rate=1e-5,
+            warmup_steps=0,
+            max_steps=2,
+            gradient_checkpointing=True,
+            fp16=torch.cuda.is_available(),
+            eval_strategy="steps",
+            per_device_eval_batch_size=2,
+            predict_with_generate=True,
+            generation_max_length=225,
+            save_steps=1,
+            eval_steps=1,
+            logging_steps=1,
+            remove_unused_columns=False
+        )
+    else:
+        training_args = Seq2SeqTrainingArguments(
+            output_dir=output_dir,
+            per_device_train_batch_size=16,
+            gradient_accumulation_steps=2,
+            learning_rate=1e-5,
+            warmup_steps=500,
+            max_steps=4000,
+            gradient_checkpointing=True,
+            fp16=True,
+            eval_strategy="steps",
+            per_device_eval_batch_size=8,
+            predict_with_generate=True,
+            generation_max_length=225,
+            save_steps=1000,
+            eval_steps=1000,
+            logging_steps=50,
+            report_to=["tensorboard"],
+            load_best_model_at_end=True,
+            metric_for_best_model="wer",
+            greater_is_better=False,
+            dataloader_num_workers=2,
+            remove_unused_columns=False
+        )
 
     # Initialize Trainer
     trainer = Seq2SeqTrainer(

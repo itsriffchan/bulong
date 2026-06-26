@@ -15,7 +15,7 @@ if not os.path.exists('/content/drive'):
 else:
     print("Google Drive is mounted and accessible.")
 
-# --- 3. Repository Path Check ---
+# --- 2. Repository Path Check ---
 # Add the project root to python path so we can import from data, training, evaluation
 project_root = "/content/Bulong"
 if os.path.exists(project_root):
@@ -33,19 +33,41 @@ except ImportError as e:
     print("Ensure you cloned the repository and added the directory path to sys.path.")
     sys.exit(1)
 
-# --- 4. Pipeline Execution ---
+# --- 3. Pipeline Execution ---
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dry-run", action="store_true", help="Run a quick 1-minute sanity check with a tiny dataset and 2 steps.")
+    args = parser.parse_args()
+
+    dry_run = args.dry_run
+    if dry_run:
+        print("\n" + "="*60)
+        print("RUNNING IN DRY RUN MODE (SANITY CHECK)")
+        print("="*60)
+
     print("\n" + "="*60)
     print("Step 1: Dataset Downloading & Preprocessing")
     print("="*60)
-    raw_dataset, processor, tokenizer = preprocess_dataset()
+    raw_dataset, processor, tokenizer = preprocess_dataset(dry_run=dry_run)
 
     print("\n" + "="*60)
     print("Step 2: Training the Whisper Model")
     print("="*60)
-    train_model(raw_dataset, processor, tokenizer)
+    train_model(raw_dataset, processor, tokenizer, dry_run=dry_run)
 
     print("\n" + "="*60)
     print("Step 3: Evaluating the Fine-Tuned Model Checkpoint")
     print("="*60)
-    evaluate_model()
+    
+    # Configure path to checkpoint folder
+    checkpoint_path = "/content/drive/MyDrive/whisper-tiny-philippine-dialects/checkpoint-4000"
+    if dry_run:
+        # In dry run, check if a 2-step checkpoint was saved
+        checkpoint_path = "/content/drive/MyDrive/whisper-tiny-philippine-dialects/checkpoint-2"
+        # If the output folder doesn't exist, fall back to base model just to verify code flow
+        if not os.path.exists(checkpoint_path):
+            print("Warning: Dry run checkpoint not found. Evaluating base model instead.")
+            checkpoint_path = "openai/whisper-tiny"
+
+    evaluate_model(model_checkpoint_path=checkpoint_path, dry_run=dry_run)

@@ -20,10 +20,13 @@ def load_split(json_path):
         item["wav_file"] = "/content/" + wav_path.split("PLD/", 1)[1] if "PLD/" in wav_path else wav_path
     return data
 
-def evaluate_model(test_json_path="/content/test.json", model_checkpoint_path="/content/drive/MyDrive/whisper-tiny-philippine-dialects/checkpoint-4000", base_model_name="openai/whisper-tiny"):
+def evaluate_model(test_json_path="/content/test.json", model_checkpoint_path="/content/drive/MyDrive/whisper-tiny-philippine-dialects/checkpoint-4000", base_model_name="openai/whisper-tiny", dry_run=False):
     # 1. Load model and tokenizer
     print(f"Loading checkpoint from {model_checkpoint_path}...")
-    model = WhisperForConditionalGeneration.from_pretrained(model_checkpoint_path).to("cuda")
+    
+    # Handle CPU fallback during dry run if CUDA is unavailable
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model = WhisperForConditionalGeneration.from_pretrained(model_checkpoint_path).to(device)
     processor = WhisperProcessor.from_pretrained(base_model_name, language="Tagalog", task="transcribe")
     metric = evaluate.load("wer")
     model.eval()
@@ -31,7 +34,12 @@ def evaluate_model(test_json_path="/content/test.json", model_checkpoint_path="/
     # 2. Load test split
     print(f"Loading test split from {test_json_path}...")
     test_data = load_split(test_json_path)
-    test_subset = test_data[:100]
+    
+    if dry_run:
+        print("Dry run mode: Slicing test set (2 files)...")
+        test_subset = test_data[:2]
+    else:
+        test_subset = test_data[:100]
 
     predictions = []
     references = []
@@ -47,7 +55,7 @@ def evaluate_model(test_json_path="/content/test.json", model_checkpoint_path="/
             speech = librosa.resample(speech, orig_sr=rate, target_sr=16000)
 
         # Extract Mel-features & run model generation
-        input_features = processor(speech, sampling_rate=16000, return_tensors="pt").input_features.to("cuda")
+        input_features = processor(speech, sampling_rate=16000, return_tensors="pt").input_features.to(device)
         with torch.no_grad():
             predicted_ids = model.generate(input_features)
         prediction = processor.batch_decode(predicted_ids, skip_special_tokens=True)[0]

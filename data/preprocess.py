@@ -32,7 +32,7 @@ def to_hf_dataset(split_data):
     dataset = dataset.cast_column("audio", Audio(sampling_rate=16000))
     return dataset
 
-def preprocess_dataset(file_id="17gyqQrLWpdse2iceosEZxTVwn0CDUNKT", destination="/content"):
+def preprocess_dataset(file_id="17gyqQrLWpdse2iceosEZxTVwn0CDUNKT", destination="/content", dry_run=False):
     # Download and extract the PLD dataset
     local_zip_path = os.path.join(destination, "PLD.zip")
     pld_dir = os.path.join(destination, "PLD")
@@ -54,6 +54,11 @@ def preprocess_dataset(file_id="17gyqQrLWpdse2iceosEZxTVwn0CDUNKT", destination=
     print("Loading dataset splits...")
     train_data = load_split(os.path.join(destination, "train.json"))
     val_data = load_split(os.path.join(destination, "val.json"))
+
+    if dry_run:
+        print("Dry run mode: Slicing dataset splits (5 train, 2 validation)...")
+        train_data = train_data[:5]
+        val_data = val_data[:2]
 
     # --- 3. Convert to Hugging Face Format ---
     print("Preparing Hugging Face datasets...")

@@ -75,10 +75,23 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-### 2. Execution Flow
+### 2. Dataset Setup
+Due to licensing and distribution restrictions, the **UP-DSP-PLD** dataset cannot be redistributed or downloaded automatically. You must request and obtain it officially from UP-DSP.
+
+Once obtained, set up your workspace folders:
+* **Running Locally**: Place your extracted `PLD` directory under `data/PLD` (so that `data/PLD/wavs` exists).
+* **Running in Google Colab**:
+  1. Upload `PLD.zip` to your Google Drive.
+  2. In your notebook, mount Drive and copy the zip to Colab's workspace:
+     ```python
+     !cp /content/drive/MyDrive/PLD.zip /content/PLD.zip
+     ```
+     The pipeline will automatically extract the zip file for you when executed.
+
+### 3. Execution Flow
 
 #### Running the Full Pipeline (Recommended)
-You can run the entire dataset downloading, preprocessing, training, and evaluation pipeline with a single orchestrator command:
+You can run the entire preprocessing, training, and evaluation pipeline with a single orchestrator command:
 ```bash
 python run_pipeline.py
 ```

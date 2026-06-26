@@ -32,6 +32,17 @@ def evaluate_model(test_json_path="/content/test.json", model_checkpoint_path="/
     model.eval()
 
     # 2. Load test split
+    if not os.path.exists(test_json_path):
+        alt_paths = [
+            "/content/PLD/test.json",
+            "./data/PLD/test.json",
+            "./test.json"
+        ]
+        for path in alt_paths:
+            if os.path.exists(path):
+                test_json_path = path
+                break
+
     print(f"Loading test split from {test_json_path}...")
     test_data = load_split(test_json_path)
     

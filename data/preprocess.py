@@ -32,28 +32,72 @@ def to_hf_dataset(split_data):
     dataset = dataset.cast_column("audio", Audio(sampling_rate=16000))
     return dataset
 
-def preprocess_dataset(file_id="17gyqQrLWpdse2iceosEZxTVwn0CDUNKT", destination="/content", dry_run=False):
-    # Download and extract the PLD dataset
-    local_zip_path = os.path.join(destination, "PLD.zip")
+def preprocess_dataset(destination="/content", dry_run=False):
+    # Check if the extracted PLD dataset directory exists
     pld_dir = os.path.join(destination, "PLD")
 
+    # Fallback to local path if not in Colab environment
+    if not os.path.exists(pld_dir) and not destination.startswith("/content"):
+        pld_dir = "./data/PLD"
+        destination = "./data"
+
     if not os.path.exists(pld_dir):
-        print(f"Downloading PLD.zip to {local_zip_path}...")
-        os.system(f'gdown --id "{file_id}" -O "{local_zip_path}"')
+        # Scan the directory for any ZIP or TAR archive containing "pld" or "up-dsp" (case-insensitive)
+        archive_files = [
+            f for f in os.listdir(destination)
+            if (f.lower().endswith('.zip') or f.lower().endswith('.tar.gz') or f.lower().endswith('.tgz'))
+            and ('pld' in f.lower() or 'up-dsp' in f.lower())
+        ]
         
-        if os.path.exists(local_zip_path):
-            print("Extracting PLD.zip...")
-            with zipfile.ZipFile(local_zip_path, 'r') as zip_ref:
-                zip_ref.extractall(destination)
-            os.remove(local_zip_path)
+        if archive_files:
+            matched_archive = archive_files[0]
+            local_archive_path = os.path.join(destination, matched_archive)
+            print(f"Found dataset archive: '{matched_archive}'. Extracting...")
+            
+            if matched_archive.lower().endswith('.zip'):
+                with zipfile.ZipFile(local_archive_path, 'r') as zip_ref:
+                    zip_ref.extractall(destination)
+            elif matched_archive.lower().endswith('.tar.gz') or matched_archive.lower().endswith('.tgz'):
+                import tarfile
+                with tarfile.open(local_archive_path, 'r:gz') as tar_ref:
+                    tar_ref.extractall(destination)
+                    
+            os.remove(local_archive_path)
             print("Extraction complete.")
         else:
-            print("Dataset ZIP download failed. Please ensure Drive folder paths or IDs are correct.")
+            print("\n" + "="*60)
+            print("ERROR: UP-DSP-PLD dataset not found!")
+            print("="*60)
+            print("The UP-DSP Philippine Languages Database is licensed and cannot be distributed publicly.")
+            print("Please obtain the dataset officially and place it in your workspace.")
+            print(f"\nExpected directory path: {os.path.abspath(pld_dir)}")
+            print("If running in Google Colab:")
+            print("  1. Mount your Google Drive.")
+            print("  2. Upload 'PLD.zip' to Drive and copy it to '/content/PLD.zip', or extract 'PLD' directly to '/content/PLD'.")
+            print("="*60 + "\n")
+            raise FileNotFoundError(f"Dataset directory '{pld_dir}' not found.")
 
     # --- 2. Load Splits & Adjust Paths ---
-    print("Loading dataset splits...")
-    train_data = load_split(os.path.join(destination, "train.json"))
-    val_data = load_split(os.path.join(destination, "val.json"))
+    train_path = os.path.join(destination, "train.json")
+    val_path = os.path.join(destination, "val.json")
+
+    # Fallback to check inside PLD directory
+    if not os.path.exists(train_path):
+        train_path = os.path.join(pld_dir, "train.json")
+        val_path = os.path.join(pld_dir, "val.json")
+
+    if not os.path.exists(train_path):
+        print("\n" + "="*60)
+        print("ERROR: train.json or val.json not found!")
+        print("="*60)
+        print(f"Looked in: '{os.path.abspath(destination)}' and '{os.path.abspath(pld_dir)}'")
+        print("Please ensure your dataset contains the split files ('train.json' and 'val.json').")
+        print("="*60 + "\n")
+        raise FileNotFoundError(f"Could not find 'train.json' or 'val.json'.")
+
+    print(f"Loading dataset splits from {train_path} and {val_path}...")
+    train_data = load_split(train_path)
+    val_data = load_split(val_path)
 
     if dry_run:
         print("Dry run mode: Slicing dataset splits (5 train, 2 validation)...")

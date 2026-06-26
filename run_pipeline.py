@@ -8,13 +8,12 @@ Orchestrator script importing step-by-step modular code for running in Google Co
 import os
 import sys
 
-# --- 1. Google Drive Mounting ---
-try:
-    from google.colab import drive
-    print("Mounting Google Drive...")
-    drive.mount('/content/drive')
-except ImportError:
-    print("Not running in Google Colab or Colab Environment not detected.")
+# --- 1. Google Drive Check ---
+if not os.path.exists('/content/drive'):
+    print("Warning: Google Drive not detected at /content/drive.")
+    print("If you are running in Colab, please run 'from google.colab import drive; drive.mount(\"/content/drive\")' in a notebook cell first.")
+else:
+    print("Google Drive is mounted and accessible.")
 
 # --- 3. Repository Path Check ---
 # Add the project root to python path so we can import from data, training, evaluation

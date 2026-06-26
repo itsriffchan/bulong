@@ -1,6 +1,6 @@
 # Bulong: A Reproducible Whisper Fine-Tuning Pipeline for Philippine Multilingual Speech Recognition
 
-## def __init__():
+## def \__init__():
 
 * self.member1 = **"Reese Chan"**
 * self.member2 = **"Alfred Nathaniel Embuscado"**

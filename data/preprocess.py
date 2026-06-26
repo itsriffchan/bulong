@@ -65,6 +65,8 @@ def preprocess_dataset(destination="/content", dry_run=False):
             if (f.lower().endswith('.zip') or f.lower().endswith('.tar.gz') or f.lower().endswith('.tgz'))
             and ('pld' in f.lower() or 'up-dsp' in f.lower())
         ]
+        # Prioritize .tar.gz and .tgz over .zip
+        archive_files.sort(key=lambda f: 0 if f.lower().endswith(('.tar.gz', '.tgz')) else 1)
         
         if not archive_files and destination == "/content":
             drive_path = "/content/drive/MyDrive"
@@ -75,6 +77,9 @@ def preprocess_dataset(destination="/content", dry_run=False):
                     if (f.lower().endswith('.zip') or f.lower().endswith('.tar.gz') or f.lower().endswith('.tgz'))
                     and ('pld' in f.lower() or 'up-dsp' in f.lower())
                 ]
+                # Prioritize .tar.gz and .tgz over .zip
+                drive_archives.sort(key=lambda f: 0 if f.lower().endswith(('.tar.gz', '.tgz')) else 1)
+                
                 if drive_archives:
                     drive_file = drive_archives[0]
                     drive_src = os.path.join(drive_path, drive_file)

@@ -82,7 +82,7 @@ Once obtained, you do **not** need to manually format or upload split JSON files
 
 *   **Running Locally**: Place your dataset directory or archive (e.g., `.zip` or `.tar.gz`) under the project directory. The pipeline will automatically locate it, extract it (if it is an archive), and generate the splits.
 *   **Running in Google Colab**:
-    1. Upload your dataset archive (e.g., `up-dsp-philippine-languages-database-up-d2a7dbb0.tar.gz` or `PLD.zip`) to your Google Drive.
+    1. Upload your dataset archive (e.g., `up-dsp-philippine-languages-database-up-d2a7dbb0.tar.gz` or `1773845964108-up-dsp-pld.tar.gz`) to your Google Drive.
     2. Mount your Google Drive in your Colab notebook.
     3. Run the pipeline orchestrator. It will automatically scan your Drive, copy the archive to local storage, extract it, and dynamically build the `train.json`, `val.json`, and `test.json` split files from the raw speaker `.log` and `.wav` files.
 

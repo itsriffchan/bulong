@@ -1,101 +1,62 @@
-import os
-import sys
+import json
 import torch
-from datasets import load_from_disk
+import soundfile as sf
+import librosa
+import evaluate
 from transformers import WhisperForConditionalGeneration, WhisperProcessor
-from peft import PeftModel, PeftConfig
+from tqdm import tqdm
 
-try:
-    import jiwer
-except ImportError:
-    print("Error: 'jiwer' library is required for evaluation. Run 'pip install jiwer'.")
-    sys.exit(1)
+# 1. Load the model and tokenizer
+model_path = "/content/drive/MyDrive/whisper-tiny-philippine-dialects/checkpoint-4000"
+model = WhisperForConditionalGeneration.from_pretrained(model_path).to("cuda") # Run on GPU
+processor = WhisperProcessor.from_pretrained("openai/whisper-tiny", language="Tagalog", task="transcribe")
+metric = evaluate.load("wer")
 
-# Configuration
-MODEL_NAME = "openai/whisper-tiny"
-LORA_MODEL_PATH = "./training/whisper-tiny-lora-fil"
-DATASET_PATH = "./data/processed_dataset"
-LANGUAGE = "tagalog"
-TASK = "transcribe"
+# 2. Load test split and adjust paths
+with open('/content/test.json', 'r', encoding='utf-8') as f:
+    test_data = json.load(f)
 
-def main():
-    print("=" * 60)
-    print("PH-Whisper: Evaluation & Metrics Pipeline")
-    print("=" * 60)
+for item in test_data:
+    # Normalize paths by converting backslashes and mapping to the Colab environment
+    wav_path = item["wav_file"].replace("\\", "/")
+    item["wav_file"] = "/content/" + wav_path.split("PLD/", 1)[1] if "PLD/" in wav_path else wav_path
 
-    # 1. Load validation dataset
-    if not os.path.exists(DATASET_PATH):
-        print(f"Error: Processed dataset not found at '{DATASET_PATH}'.")
-        print("Please run 'python data/preprocess.py' first.")
-        sys.exit(1)
+# 3. Evaluate on a subset of the test set (e.g., first 100 files for quick results)
+test_subset = test_data[:100]
+predictions = []
+references = []
 
-    print(f"Loading evaluation dataset from '{DATASET_PATH}'...")
-    dataset = load_from_disk(DATASET_PATH)["validation"]
+print(f"Evaluating model on {len(test_subset)} test files...")
+for item in tqdm(test_subset):
+    audio_path = item["wav_file"]
+    reference_text = item["normalized_transcript"]
 
-    # 2. Determine which model to load
-    processor = WhisperProcessor.from_pretrained(MODEL_NAME, language=LANGUAGE, task=TASK)
-    
-    if os.path.exists(LORA_MODEL_PATH) and os.path.exists(os.path.join(LORA_MODEL_PATH, "adapter_config.json")):
-        print(f"\nLoading fine-tuned LoRA adapters from '{LORA_MODEL_PATH}'...")
-        # Load base model
-        base_model = WhisperForConditionalGeneration.from_pretrained(MODEL_NAME)
-        # Load LoRA adapter
-        model = PeftModel.from_pretrained(base_model, LORA_MODEL_PATH)
-    else:
-        print(f"\n[Warning] Fine-tuned LoRA model not found at '{LORA_MODEL_PATH}'.")
-        print(f"Evaluating the base pre-trained model '{MODEL_NAME}' instead.")
-        model = WhisperForConditionalGeneration.from_pretrained(MODEL_NAME)
+    # Read audio
+    speech, rate = sf.read(audio_path)
+    if rate != 16000:
+        speech = librosa.resample(speech, orig_sr=rate, target_sr=16000)
 
-    model.eval()
-    if torch.cuda.is_available():
-        model = model.to("cuda")
+    # Extract features
+    input_features = processor(speech, sampling_rate=16000, return_tensors="pt").input_features.to("cuda")
 
-    # 3. Transcribe and evaluate
-    print("\nTranscribing audio samples...")
-    references = []
-    hypotheses = []
+    # Generate transcript
+    with torch.no_grad():
+        predicted_ids = model.generate(input_features)
+    prediction = processor.batch_decode(predicted_ids, skip_special_tokens=True)[0]
 
-    # Reload raw dataset for reference transcripts if removing columns erased them
-    from datasets import load_dataset
-    raw_stream = load_dataset("google/fleurs", "fil_ph", split="validation", streaming=True)
-    raw_samples = list(raw_stream.take(len(dataset)))
-    
-    for idx, batch in enumerate(dataset):
-        # Extract features
-        input_features = torch.tensor([batch["input_features"]])
-        if torch.cuda.is_available():
-            input_features = input_features.to("cuda")
+    predictions.append(prediction)
+    references.append(reference_text)
 
-        # Generate token predictions
-        with torch.no_grad():
-            predicted_ids = model.generate(input_features)
-        
-        # Decode predicted text
-        transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)[0]
-        
-        # Get ground truth
-        reference = raw_samples[idx]["transcription"]
-        
-        references.append(reference)
-        hypotheses.append(transcription)
+# 4. Compute Word Error Rate (WER)
+wer_score = 100 * metric.compute(predictions=predictions, references=references)
+print("\n" + "="*40)
+print(f"Evaluation Complete!")
+print(f"Average Word Error Rate (WER) on Test Set: {wer_score:.2f}%")
+print("="*40)
 
-        print(f"\nSample {idx+1}:")
-        print(f"  Reference:  {reference}")
-        print(f"  Prediction: {transcription}")
-
-    # 4. Compute metrics
-    print("\nCalculating metrics...")
-    try:
-        wer = jiwer.wer(references, hypotheses)
-        cer = jiwer.cer(references, hypotheses)
-        
-        print("\n" + "=" * 40)
-        print(f"Evaluation Results:")
-        print(f"  Word Error Rate (WER):      {wer:.2%}")
-        print(f"  Character Error Rate (CER):   {cer:.2%}")
-        print("=" * 40)
-    except Exception as e:
-        print(f"Error computing metrics: {e}")
-
-if __name__ == "__main__":
-    main()
+# Print a few samples side-by-side
+print("\nSample Comparisons:")
+for i in range(min(5, len(test_subset))):
+    print(f"\nAudio: {test_subset[i]['wav_file']}")
+    print(f"  Target:     '{references[i]}'")
+    print(f"  Prediction: '{predictions[i]}'")

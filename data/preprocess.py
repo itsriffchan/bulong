@@ -1,118 +1,77 @@
+# -*- coding: utf-8 -*-
+"""
+Data preprocessing script for UP-DSP Philippine Languages Database (PLD).
+"""
+
 import os
-import sys
-import numpy as np
-from datasets import load_dataset, DatasetDict, Dataset
-from transformers import WhisperFeatureExtractor, WhisperTokenizer
+import zipfile
+import json
+from datasets import Dataset, DatasetDict, Audio
+from transformers import WhisperFeatureExtractor, WhisperTokenizer, WhisperProcessor
 
-# Suppress Hugging Face download warning logs
-os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
+# --- 1. Environment Setup & Zip Extraction ---
+try:
+    import datacollective
+except ImportError:
+    print("Installing datacollective and datasets dependencies...")
+    os.system("pip install datacollective datasets transformers[torch] accelerate evaluate soundfile librosa jiwer gdown")
 
-# Configuration
-MODEL_NAME = "openai/whisper-tiny"
-LANGUAGE = "tagalog"
-TASK = "transcribe"
-OUTPUT_DIR = "./data/processed_dataset"
+# Download and extract the PLD dataset
+FILE_ID = "17gyqQrLWpdse2iceosEZxTVwn0CDUNKT"
+local_zip_path = "/content/PLD.zip"
 
-def generate_synthetic_samples(count):
-    """Generates synthetic audio arrays and dummy transcripts for offline testing."""
-    samples = []
-    transcripts = [
-        "naimbag a bigat kadakayo amin",
-        "marhay na aga sa saindo gabos",
-        "maupay nga aga ha iyo ngatanan",
-        "kumusta kayo amin a kakailian",
-        "damo nga salamat ha pagbulig niyo"
-    ]
+if not os.path.exists("/content/PLD"):
+    print("Downloading PLD.zip from Google Drive...")
+    os.system(f'gdown --id "{FILE_ID}" -O "{local_zip_path}"')
     
-    # Standard 2 seconds of silence/sine wave at 16kHz
-    sr = 16000
-    duration = 2.0
-    t = np.linspace(0, duration, int(sr * duration), endpoint=False)
-    
-    for i in range(count):
-        # Create a simple 440Hz sine wave as dummy audio data
-        audio_array = 0.5 * np.sin(2 * np.pi * 440 * t)
-        samples.append({
-            "audio": {
-                "path": None,
-                "array": audio_array.astype(np.float32),
-                "sampling_rate": sr
-            },
-            "transcription": transcripts[i % len(transcripts)]
-        })
-    return samples
+    if os.path.exists(local_zip_path):
+        print("Extracting PLD.zip...")
+        with zipfile.ZipFile(local_zip_path, 'r') as zip_ref:
+            zip_ref.extractall("/content/")
+        os.remove(local_zip_path)
+        print("Extraction complete.")
+    else:
+        print("Dataset ZIP download failed. Please ensure Drive folder paths or IDs are correct.")
 
-def main():
-    print("=" * 60)
-    print("PH-Whisper: Data Preprocessing Pipeline")
-    print("=" * 60)
-    
-    # 1. Load Feature Extractor and Tokenizer
-    print(f"Loading feature extractor and tokenizer for '{MODEL_NAME}'...")
-    try:
-        feature_extractor = WhisperFeatureExtractor.from_pretrained(MODEL_NAME)
-        tokenizer = WhisperTokenizer.from_pretrained(MODEL_NAME, language=LANGUAGE, task=TASK)
-    except Exception as e:
-        print(f"Error loading tokenizer/feature extractor: {e}")
-        sys.exit(1)
+# --- 2. Load Splits & Adjust Paths ---
+def load_split(json_path):
+    with open(json_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    for item in data:
+        # Normalize paths by converting backslashes and mapping to the Colab environment
+        wav_path = item["wav_file"].replace("\\", "/")
+        item["wav_file"] = "/content/" + wav_path.split("PLD/", 1)[1] if "PLD/" in wav_path else wav_path
+        orig_path = item["original_file"].replace("\\", "/")
+        item["original_file"] = "/content/" + orig_path.split("PLD/", 1)[1] if "PLD/" in orig_path else orig_path
+    return data
 
-    # 2. Load Dataset (Attempt HF Streaming with local fallback)
-    print("\nAttempting to load Google FLEURS Filipino ('fil_ph') dataset via streaming...")
-    try:
-        # Stream the training split of Filipino FLEURS
-        train_stream = load_dataset("google/fleurs", "fil_ph", split="train", streaming=True)
-        train_samples = list(train_stream.take(10))
-        
-        # Stream the validation split of Filipino FLEURS
-        val_stream = load_dataset("google/fleurs", "fil_ph", split="validation", streaming=True)
-        val_samples = list(val_stream.take(5))
-        
-        print(f"Successfully loaded {len(train_samples)} training and {len(val_samples)} validation samples via streaming!")
-    except Exception as e:
-        print(f"\n[Warning] Could not stream from Hugging Face: {e}")
-        print("Falling back to generating local synthetic audio dataset for offline testing...")
-        
-        train_samples = generate_synthetic_samples(10)
-        val_samples = generate_synthetic_samples(5)
-        print(f"Generated {len(train_samples)} synthetic training samples and {len(val_samples)} validation samples.")
+print("Loading dataset splits...")
+train_data = load_split('/content/train.json')
+val_data = load_split('/content/val.json')
 
-    # Convert the list back to Hugging Face Datasets
-    train_dataset = Dataset.from_list(train_samples)
-    val_dataset = Dataset.from_list(val_samples)
-    
-    raw_dataset = DatasetDict({
-        "train": train_dataset,
-        "validation": val_dataset
-    })
+# --- 3. Convert to Hugging Face Format ---
+def to_hf_dataset(split_data):
+    hf_dict = {
+        "audio": [item["wav_file"] for item in split_data],
+        "sentence": [item["normalized_transcript"] for item in split_data],
+        "speaker_id": [item["speaker_id"] for item in split_data],
+        "dialect": [item["dialect"] for item in split_data]
+    }
+    dataset = Dataset.from_dict(hf_dict)
+    # Cast audio column to Audio format (automatically handles resampling to 16kHz)
+    dataset = dataset.cast_column("audio", Audio(sampling_rate=16000))
+    return dataset
 
-    # 3. Preprocessing function
-    def prepare_dataset(batch):
-        audio = batch["audio"]
-        # Compute log-Mel input features from input audio array
-        batch["input_features"] = feature_extractor(
-            audio["array"], 
-            sampling_rate=audio["sampling_rate"]
-        ).input_features[0]
-        
-        # Encode target text to label ids
-        batch["labels"] = tokenizer(batch["transcription"]).input_ids
-        return batch
+print("Preparing Hugging Face datasets...")
+raw_dataset = DatasetDict({
+    "train": to_hf_dataset(train_data),
+    "validation": to_hf_dataset(val_data)
+})
+print("Dataset structure:")
+print(raw_dataset)
 
-    # 4. Apply Preprocessing
-    print("\nProcessing audio and text data (resampling to 16kHz & tokenizing transcripts)...")
-    processed_dataset = raw_dataset.map(
-        prepare_dataset,
-        remove_columns=raw_dataset["train"].column_names
-    )
-
-    # 5. Save processed dataset to disk
-    print(f"\nSaving preprocessed dataset to disk at '{OUTPUT_DIR}'...")
-    os.makedirs(os.path.dirname(OUTPUT_DIR), exist_ok=True)
-    processed_dataset.save_to_disk(OUTPUT_DIR)
-    
-    print("\nPreprocessing completed successfully!")
-    print(f"Processed dataset size: {len(processed_dataset['train'])} train samples, {len(processed_dataset['validation'])} validation samples.")
-    print("=" * 60)
-
-if __name__ == "__main__":
-    main()
+# --- 4. Load Whisper Feature Extractor & Tokenizer ---
+model_name = "openai/whisper-tiny"
+feature_extractor = WhisperFeatureExtractor.from_pretrained(model_name)
+tokenizer = WhisperTokenizer.from_pretrained(model_name, language="Tagalog", task="transcribe")
+processor = WhisperProcessor.from_pretrained(model_name, language="Tagalog", task="transcribe")

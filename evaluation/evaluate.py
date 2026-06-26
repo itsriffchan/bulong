@@ -3,6 +3,7 @@
 Model checkpoint evaluation script (Word Error Rate).
 """
 
+import os
 import json
 import torch
 import soundfile as sf
@@ -11,13 +12,36 @@ import evaluate
 from transformers import WhisperForConditionalGeneration, WhisperProcessor
 from tqdm import tqdm
 
+def resolve_audio_path(wav_path, test_dir):
+    clean_path = wav_path.replace("\\", "/")
+    if "PLD/" in clean_path:
+        sub_path = clean_path.split("PLD/", 1)[1]
+    else:
+        sub_path = clean_path
+
+    candidates = [
+        os.path.join(test_dir, sub_path),
+        os.path.join(test_dir, "PLD", sub_path),
+        os.path.join(os.path.dirname(test_dir), sub_path),
+        os.path.join(os.path.dirname(test_dir), "PLD", sub_path),
+        os.path.join(test_dir, clean_path),
+        os.path.join(os.path.dirname(test_dir), clean_path),
+    ]
+
+    for c in candidates:
+        if os.path.exists(c):
+            return os.path.abspath(c)
+
+    if test_dir.startswith("/content"):
+        return os.path.join("/content", sub_path)
+    return os.path.abspath(os.path.join(test_dir, sub_path))
+
 def load_split(json_path):
+    test_dir = os.path.dirname(json_path)
     with open(json_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
     for item in data:
-        # Normalize paths by converting backslashes and mapping to the Colab environment
-        wav_path = item["wav_file"].replace("\\", "/")
-        item["wav_file"] = "/content/" + wav_path.split("PLD/", 1)[1] if "PLD/" in wav_path else wav_path
+        item["wav_file"] = resolve_audio_path(item["wav_file"], test_dir)
     return data
 
 def evaluate_model(test_json_path="/content/test.json", model_checkpoint_path="/content/drive/MyDrive/whisper-tiny-philippine-dialects/checkpoint-4000", base_model_name="openai/whisper-tiny", dry_run=False):
@@ -33,15 +57,20 @@ def evaluate_model(test_json_path="/content/test.json", model_checkpoint_path="/
 
     # 2. Load test split
     if not os.path.exists(test_json_path):
-        alt_paths = [
-            "/content/PLD/test.json",
-            "./data/PLD/test.json",
-            "./test.json"
-        ]
-        for path in alt_paths:
-            if os.path.exists(path):
-                test_json_path = path
+        # Recursively search for test.json
+        found_test_path = None
+        search_roots = ["/content", "."] if os.path.exists("/content") else ["."]
+        for s_root in search_roots:
+            for root, dirs, files in os.walk(s_root):
+                if any(part.startswith('.') or part == 'node_modules' or part == 'venv' or part == '.venv' for part in root.split(os.sep)):
+                    continue
+                if "test.json" in files:
+                    found_test_path = os.path.join(root, "test.json")
+                    break
+            if found_test_path:
                 break
+        if found_test_path:
+            test_json_path = found_test_path
 
     print(f"Loading test split from {test_json_path}...")
     test_data = load_split(test_json_path)

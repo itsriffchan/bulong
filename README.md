@@ -124,14 +124,6 @@ Alternatively, you can run individual stages of the pipeline separately:
 
 ---
 
-# Future Work
-* Parameter-efficient fine-tuning (LoRA) integration.
-* Support for additional Philippine languages and code-switched speech recognition.
-* Quantized weights for edge-device deployment.
-* Public multilingual ASR benchmark leaderboard.
-
----
-
 # Acknowledgements & License
 * UP-DSP Philippine Languages Database team.
 * OpenAI Whisper and Hugging Face developers.

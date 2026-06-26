@@ -152,30 +152,29 @@ def to_hf_dataset(split_data):
     dataset = dataset.cast_column("audio", Audio(sampling_rate=16000))
     return dataset
 
-def preprocess_dataset(destination="/content", dry_run=False):
-    # Scan destination directory to find any existing folder containing "pld" or "up-dsp"
-    pld_dir = None
-    if os.path.exists(destination):
-        folders = [
-            d for d in os.listdir(destination)
-            if os.path.isdir(os.path.join(destination, d))
-            and ('pld' in d.lower() or 'up-dsp' in d.lower())
-        ]
-        if folders:
-            pld_dir = os.path.join(destination, folders[0])
+def find_pld_dir(search_root):
+    if not os.path.exists(search_root):
+        return None
+    for root_dir, dirs, files in os.walk(search_root):
+        # Skip hidden and system/venv/drive folders to avoid slow recursive search
+        if any(part.startswith('.') or part == 'node_modules' or part == 'venv' or part == '.venv' or part == 'drive' for part in root_dir.split(os.sep)):
+            continue
+        log_files = [f for f in files if f.endswith('.log')]
+        if log_files:
+            log_path = os.path.join(root_dir, log_files[0])
+            speaker_dir = os.path.dirname(log_path)
+            lang_dir = os.path.dirname(speaker_dir)
+            pld_dir = os.path.dirname(lang_dir)
+            return pld_dir
+    return None
 
-    # If not found and not in Colab, fallback to checking local "./data" directory
-    if not pld_dir and not destination.startswith("/content") and os.path.exists("./data"):
-        destination = "./data"
-        folders = [
-            d for d in os.listdir(destination)
-            if os.path.isdir(os.path.join(destination, d))
-            and ('pld' in d.lower() or 'up-dsp' in d.lower())
-        ]
-        if folders:
-            pld_dir = os.path.join(destination, folders[0])
-        else:
-            pld_dir = "./data/PLD"
+def preprocess_dataset(destination="/content", dry_run=False):
+    # Scan destination directory to find any existing folder containing log files
+    pld_dir = find_pld_dir(destination)
+
+    # If not found and not in Colab, fallback to checking local "./data" directory or current directory
+    if not pld_dir and not destination.startswith("/content"):
+        pld_dir = find_pld_dir("./data") or find_pld_dir(".")
 
     # If still not found, try to locate and extract an archive
     if not pld_dir or not os.path.exists(pld_dir):
@@ -226,14 +225,8 @@ def preprocess_dataset(destination="/content", dry_run=False):
             print("Extraction complete.")
 
             # Scan again to locate the extracted folder name
-            folders = [
-                d for d in os.listdir(destination)
-                if os.path.isdir(os.path.join(destination, d))
-                and ('pld' in d.lower() or 'up-dsp' in d.lower())
-            ]
-            if folders:
-                pld_dir = os.path.join(destination, folders[0])
-            else:
+            pld_dir = find_pld_dir(destination)
+            if not pld_dir:
                 pld_dir = os.path.join(destination, "PLD")
         else:
             print("\n" + "="*60)
